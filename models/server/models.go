@@ -57,6 +57,12 @@ func New(deps Deps) *Server {
 	r.Use(recoverer(deps.Logger))
 	r.Use(requestLogger(deps.Logger))
 
+	// Main Endpoint
+	r.Get("/", func(w http.ResponseWriter, req *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"We are online baby!"}`))
+	})
+
 	// Health endpoints (root-level).
 	r.Get("/health", func(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusOK)

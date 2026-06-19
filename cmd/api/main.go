@@ -10,7 +10,9 @@ import (
 
 	"alloy/internal/app/boot"
 	"alloy/internal/app/config"
+	server "alloy/internal/server"
 	"alloy/internal/tui"
+	"alloy/models/apidocs"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
@@ -18,13 +20,13 @@ import (
 )
 
 var (
-	logs, server_log, docs, others *tui.Pane
+	logs, server_log, apidocslogs, others *tui.Pane
 )
 
 func main() {
 	app := tui.New()
 	left, right := app.SplitVertically("SERVER LOGS", "")
-	others, docs = right.SplitHorizontally("Server Info", "API DOCS")
+	others, apidocslogs = right.SplitHorizontally("Server Info", "API DOCS")
 	logs, server_log = left.SplitHorizontally("Logs", "Server Logs")
 	go run_app()
 	if err := app.Run(); err != nil {
@@ -63,6 +65,17 @@ func run_app() error {
 	server_log.AppendContent("accounting_core api ready")
 	server_log.AppendContent("env : " + cfg.App.Env)
 	server_log.AppendContent("port : " + strconv.Itoa(cfg.App.Port))
+	printAPIDocs()
+	return api_app.Run(ctx)
+}
 
-	return api_app.Run(ctx, logs.AppendContent)
+func printAPIDocs() {
+	var docs []apidocs.RouteDoc
+
+	docs = append(docs, server.RouteDocs()...)
+
+	if len(docs) == 0 {
+		return
+	}
+	apidocs.PrintAPIRoutes(docs, apidocslogs.AppendContent)
 }
