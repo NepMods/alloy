@@ -37,7 +37,7 @@ func (t *TUI) SplitHorizontally(a, b string) (*Pane, *Pane) {
 }
 
 func (t *TUI) Run() error {
-	t.program = tea.NewProgram(t, tea.WithAltScreen(), tea.WithMouseCellMotion())
+	t.program = tea.NewProgram(t, tea.WithAltScreen())
 	_, err := t.program.Run()
 	return err
 }

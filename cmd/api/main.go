@@ -11,6 +11,10 @@ import (
 	"alloy/internal/app/boot"
 	"alloy/internal/app/config"
 	"alloy/internal/tui"
+
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 var (
@@ -32,6 +36,7 @@ func main() {
 func run_app() error {
 	cfg, err := config.Load()
 	if err != nil {
+		server_log.AppendContent("Error loading config: " + err.Error())
 		return err
 	}
 	logs.AppendContent(fmt.Sprintf("Loaded config: %+v", cfg))
@@ -40,6 +45,7 @@ func run_app() error {
 
 	api_app, err := boot.Build(ctx, cfg, logs.AppendContent)
 	if err != nil {
+		server_log.AppendContent("Error building app: " + err.Error())
 		return err
 	}
 	server_log.AppendContent("App Started at http://localhost:" + strconv.Itoa(cfg.App.Port))

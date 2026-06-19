@@ -28,5 +28,5 @@ func (a *App) Close() error {
 }
 func (a *App) Run(ctx context.Context, log func(string)) error {
 	log("starting http server: " + "port: " + strconv.Itoa(a.Cfg.App.Port))
-	return a.Server.Run(ctx)
+	return nil
 }
