@@ -8,6 +8,7 @@ require (
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/go-chi/chi/v5 v5.3.0
+	github.com/joho/godotenv v1.5.1
 	github.com/redis/go-redis/v9 v9.7.1
 )
 

@@ -254,12 +254,13 @@ func (t *TUI) View() string {
 				title = "▎" + p.title + " "
 			}
 			innerW := w - 2
+			innerH := max(0, h-2)
 			headerSty := lipgloss.NewStyle().Bold(true).Padding(0, 1).Foreground(lipgloss.Color("255")).Background(lipgloss.Color("63"))
 			return lipgloss.NewStyle().
 				Border(lipgloss.RoundedBorder()).
 				BorderForeground(borderColor).
 				Width(w).
-				Height(h).
+				Height(innerH).
 				Render(lipgloss.JoinVertical(lipgloss.Top,
 					headerSty.Width(innerW).Render(title),
 					p.view.View(),
