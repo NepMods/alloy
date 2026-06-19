@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 
 	"alloy/internal/app/boot"
 	"alloy/internal/app/config"
@@ -36,11 +38,25 @@ func run_app() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	api_app, err := boot.Build(ctx)
+	api_app, err := boot.Build(ctx, cfg, logs.AppendContent)
 	if err != nil {
 		return err
 	}
 	server_log.AppendContent("App Started at http://localhost:" + strconv.Itoa(cfg.App.Port))
 	defer api_app.Close()
-	return nil
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		<-stop
+		server_log.AppendContent("Shutting down...")
+		cancel()
+	}()
+
+	server_log.AppendContent("accounting_core api ready")
+	server_log.AppendContent("env : " + cfg.App.Env)
+	server_log.AppendContent("port : " + strconv.Itoa(cfg.App.Port))
+
+	return api_app.Run(ctx, logs.AppendContent)
 }
