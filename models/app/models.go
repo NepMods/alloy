@@ -6,6 +6,7 @@ import (
 	"context"
 	"strconv"
 
+	"alloy/models/contract"
 	server "alloy/models/server"
 
 	"github.com/NepMods/ember"
@@ -20,7 +21,8 @@ type App struct {
 	Redis goredis.UniversalClient
 	Bus   messaging.Bus
 
-	Server *server.Server
+	Registry *contract.Registry
+	Server   *server.Server
 }
 
 func (a *App) Close() error {

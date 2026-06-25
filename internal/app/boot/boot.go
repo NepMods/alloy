@@ -75,7 +75,7 @@ func Build(ctx context.Context, cfg config.Config, log func(string)) (*app.App, 
 	})
 
 	return &app.App{
-		Cfg: cfg, Log: log, DB: db, Server: srv, Redis: rdb, Bus: bus,
+		Cfg: cfg, Log: log, DB: db, Server: srv, Redis: rdb, Bus: bus, Registry: reg,
 	}, nil
 }
 
