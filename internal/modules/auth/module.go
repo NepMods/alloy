@@ -31,10 +31,10 @@ func (m *Module) Manifest() contract.Manifest {
 		Requires: nil, // auth depends only on kernel-owned interfaces (always available)
 
 		Permissions: []contract.Permission{
-			{Key: "core.members.read", Description: "List tenant members", DefaultRoles: []string{"owner", "admin", "accountant", "reviewer"}},
-			{Key: "core.members.invite", Description: "Invite a new member", DefaultRoles: []string{"owner", "admin"}},
-			{Key: "core.members.role_set", Description: "Change a member's role", DefaultRoles: []string{"owner", "admin"}},
-			{Key: "core.profile.update", Description: "Edit own profile", DefaultRoles: allRoles()},
+			{Key: "core.members.read", Description: "List tenant members"},
+			{Key: "core.members.invite", Description: "Invite a new member"},
+			{Key: "core.members.role_set", Description: "Change a member's role"},
+			{Key: "core.profile.update", Description: "Edit own profile"},
 		},
 
 		Events: []contract.EventSpec{

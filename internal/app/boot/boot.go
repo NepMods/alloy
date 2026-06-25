@@ -4,6 +4,7 @@ import (
 	"alloy/internal/app/config"
 	"alloy/internal/modules/auth"
 	platformdb "alloy/internal/platform/db"
+	"alloy/internal/platform/kernel"
 	"alloy/internal/platform/messaging"
 	platformredis "alloy/internal/platform/redis"
 	"alloy/models/app"
@@ -61,21 +62,28 @@ func Build(ctx context.Context, cfg config.Config, log func(string)) (*app.App, 
 		})
 	}()
 
+	// HTTP server (holds the HTTPRoot modules mount onto).
+	srv := server.New(server.Deps{
+		Config: cfg, Logger: log, Redis: rdb,
+		DBPing: func(c context.Context) error { return db.Ping(c) },
+	})
+
+	k, err := kernel.New(kernel.Deps{
+		Config: cfg, DB: db, Redis: rdb, Bus: bus, Server: srv, Ctx: ctx,
+	})
 	reg := contract.NewRegistry()
 	for _, m := range Modules(cfg, log) {
 		if err := reg.RegisterModule(m); err != nil {
-
+			bus.Publish(ctx, messaging.Message{
+				Topic:   "log.server",
+				Payload: "[Registering Modules] Error Registering Module: " + m.Manifest().Name,
+			})
 			return nil, fmt.Errorf("boot: register module %s: %w", m.Manifest().Name, err)
 		}
 	}
 
-	srv := server.New(server.Deps{
-		Config: cfg, Logger: log,
-		DBPing: func(c context.Context) error { return db.Ping(c) },
-	})
-
 	return &app.App{
-		Cfg: cfg, Log: log, DB: db, Server: srv, Redis: rdb, Bus: bus, Registry: reg,
+		Cfg: cfg, Log: log, DB: db, Server: srv, Redis: rdb, Bus: bus, Registry: reg, Kernel: k,
 	}, nil
 }
 

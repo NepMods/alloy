@@ -30,8 +30,6 @@ type RedisBus struct {
 // RedisBusOption configures a RedisBus.
 type RedisBusOption func(*RedisBus)
 
-// WithChannelPrefix namespaces every channel (e.g. "acme:") to isolate tenants
-// or environments on a shared Redis.
 func WithChannelPrefix(prefix string) RedisBusOption {
 	return func(b *RedisBus) {
 		b.channelFunc = func(topic string) string { return prefix + topic }
@@ -57,7 +55,6 @@ type envelope struct {
 	Topic      string            `json:"topic"`
 	Payload    json.RawMessage   `json:"payload"`
 	OccurredAt string            `json:"occurred_at"`
-	TenantID   int64             `json:"tenant_id"`
 	TraceID    string            `json:"trace_id,omitempty"`
 	Metadata   map[string]string `json:"metadata,omitempty"`
 }

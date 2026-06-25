@@ -2,6 +2,7 @@ package server_models
 
 import (
 	"alloy/internal/app/config"
+	"alloy/models/contract"
 	"context"
 	"errors"
 	"fmt"
@@ -16,20 +17,77 @@ import (
 	chi "github.com/go-chi/chi/v5"
 
 	chimw "github.com/go-chi/chi/v5/middleware"
+	goredis "github.com/redis/go-redis/v9"
 )
 
 // Deps are the runtime services the server needs at construction.
 type Deps struct {
 	Config config.Config
 	Logger func(string)
+
+	Redis  goredis.UniversalClient
 	DBPing func(ctx context.Context) error
 }
 
 type httpRoot struct {
-	mux       *chi.Mux
-	mounted   map[string]bool
-	tenantMWs []func(http.Handler) http.Handler
+	mux     *chi.Mux
+	mounted map[string]bool
 }
+
+func (h *httpRoot) Mount(module string, build func(router contract.Router)) {
+	if h.mounted[module] {
+		return // defensive: a module mounting twice is a no-op (Validate should catch earlier)
+	}
+	h.mounted[module] = true
+	h.mux.Route("/v1/"+module, func(r chi.Router) {
+		build(&routerAdapter{r: r})
+	})
+}
+
+// routerAdapter adapts chi.Router to contract.Router.
+type routerAdapter struct{ r chi.Router }
+
+func (a *routerAdapter) Get(p string, h any)    { a.r.Get(p, toHandler(h)) }
+func (a *routerAdapter) Post(p string, h any)   { a.r.Post(p, toHandler(h)) }
+func (a *routerAdapter) Put(p string, h any)    { a.r.Put(p, toHandler(h)) }
+func (a *routerAdapter) Patch(p string, h any)  { a.r.Patch(p, toHandler(h)) }
+func (a *routerAdapter) Delete(p string, h any) { a.r.Delete(p, toHandler(h)) }
+
+func (a *routerAdapter) Route(pattern string, fn func(r contract.Router)) contract.Router {
+	sub := a.r.Route(pattern, func(r chi.Router) { fn(&routerAdapter{r: r}) })
+	return &routerAdapter{r: sub}
+}
+
+func (a *routerAdapter) Group(fn func(r contract.Router)) contract.Router {
+	g := a.r.Group(func(r chi.Router) { fn(&routerAdapter{r: r}) })
+	return &routerAdapter{r: g}
+}
+
+func (a *routerAdapter) Use(mw ...any) {
+	for _, m := range mw {
+		if cm, ok := m.(func(http.Handler) http.Handler); ok {
+			a.r.Use(cm)
+		}
+	}
+}
+
+// toHandler accepts either an http.HandlerFunc or http.Handler.
+func toHandler(h any) http.HandlerFunc {
+	switch v := h.(type) {
+	case http.HandlerFunc:
+		return v
+	case func(http.ResponseWriter, *http.Request):
+		return v
+	case http.Handler:
+		return v.ServeHTTP
+	default:
+		return func(w http.ResponseWriter, _ *http.Request) {
+			http.Error(w, `{"error":{"code":"internal","message":"bad handler"}}`, http.StatusInternalServerError)
+		}
+	}
+}
+
+func (h *httpRoot) Router() contract.Router { return &routerAdapter{r: h.mux} }
 
 func newHTTPRoot(mux *chi.Mux) *httpRoot {
 	return &httpRoot{mux: mux, mounted: map[string]bool{}}
@@ -189,3 +247,6 @@ func (s *statusRecorder) WriteHeader(code int) {
 	s.status = code
 	s.ResponseWriter.WriteHeader(code)
 }
+
+// HTTPRoot exposes the mount point modules use to register routes.
+func (s *Server) HTTPRoot() contract.HTTPRoot { return s.root }

@@ -1,9 +1,9 @@
 package contract
 
 import (
+	"alloy/internal/app/config"
 	"context"
 	"fmt"
-	"net/http"
 	"reflect"
 )
 
@@ -67,7 +67,7 @@ func (r *Registry) RegisterModule(m Module) error {
 
 type Runtime interface {
 	Logger() func(string)
-	Config() ConfigSnapshot
+	Config() config.Config
 	DB() DBHandle       // the global ac_orm pool, for a module's OWN tables only
 	HTTPRoot() HTTPRoot // mount the module's routes here
 }
@@ -100,10 +100,6 @@ type HTTPRoot interface {
 	// Mount registers a chi.Router under /v1/<module>. Implementations also
 	// record the mount for /healthz introspection.
 	Mount(module string, build func(router Router))
-	// AddTenantMiddleware registers middleware that runs on every module
-	// sub-router (for tenant resolution, auth, etc.). Must be called before
-	// any Mount calls.
-	AddTenantMiddleware(mw func(http.Handler) http.Handler)
 	Router() Router
 }
 
@@ -122,9 +118,8 @@ type Router interface {
 
 // Permission is an RBAC capability declared by a module.
 type Permission struct {
-	Key          string // "<module>.<resource>.<action>"
-	Description  string
-	DefaultRoles []string // roles that get this by default on a new tenant
+	Key         string // "<module>.<resource>.<action>"
+	Description string
 }
 
 // EventSpec documents a pub/sub relationship.
@@ -238,4 +233,43 @@ type ForeignKeyDef interface {
 	RestrictOnDelete() ForeignKeyDef
 	NullOnDelete() ForeignKeyDef
 	Name(name string) ForeignKeyDef
+}
+
+// Audit writes to the kernel-owned, immutable audit_log. Modules MUST use this
+// (never their own table) for any security-relevant mutation record.
+type Audit interface {
+	Record(ctx context.Context, entry AuditEntry) error
+}
+
+// AuditEntry is the payload for an audit record.
+type AuditEntry struct {
+	ActorID   int64          // user id, 0 for system
+	Action    string         // e.g. "journal.post"
+	Module    string         // module originating the action
+	Subject   string         // human label of what changed
+	Before    map[string]any // snapshot pre-change (nil for creates)
+	After     map[string]any // snapshot post-change (nil for deletes)
+	IP        string
+	UserAgent string
+	Metadata  map[string]string
+}
+
+// Sessions manages kernel-owned refresh sessions.
+type Sessions interface {
+	Create(ctx context.Context, s Session) (string, error)
+	Verify(ctx context.Context, token string) (*Session, error)
+	Revoke(ctx context.Context, token string) error
+	RevokeUser(ctx context.Context, userID int64) error
+}
+
+// Session is the kernel-owned session record.
+type Session struct {
+	ID           int64
+	UserID       int64
+	RefreshToken string
+	IssuedAt     int64
+	ExpiresAt    int64
+	UserAgent    string
+	IP           string
+	Revoked      bool
 }

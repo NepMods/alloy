@@ -21,6 +21,7 @@ type App struct {
 	Redis goredis.UniversalClient
 	Bus   messaging.Bus
 
+	Kernel   contract.Runtime
 	Registry *contract.Registry
 	Server   *server.Server
 }
