@@ -45,7 +45,8 @@ type Registry struct {
 // NewRegistry creates an empty Registry.
 func NewRegistry() *Registry {
 	return &Registry{
-		byName: map[string]Module{},
+		byName:   map[string]Module{},
+		provided: map[reflect.Type]Module{},
 	}
 }
 
