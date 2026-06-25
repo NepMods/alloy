@@ -34,7 +34,7 @@ type httpRoot struct {
 	mounted map[string]bool
 }
 
-func (h *httpRoot) Mount(module string, build func(router contract.Router)) {
+func (h *httpRoot) Mount(module string, build func(router contract.Router), log func(string)) {
 	if h.mounted[module] {
 		return // defensive: a module mounting twice is a no-op (Validate should catch earlier)
 	}

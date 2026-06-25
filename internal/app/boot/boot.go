@@ -2,6 +2,7 @@ package boot
 
 import (
 	"alloy/internal/app/config"
+	"alloy/internal/modules/counter"
 	"alloy/internal/modules/hello_world"
 	platformdb "alloy/internal/platform/db"
 	"alloy/internal/platform/kernel"
@@ -20,6 +21,7 @@ import (
 func Modules(cfg config.Config, log func(string)) []contract.Module {
 	return []contract.Module{
 		hello_world.New(cfg, log),
+		counter.New(cfg, log),
 	}
 }
 
@@ -75,12 +77,20 @@ func Build(ctx context.Context, cfg config.Config, log func(string)) (*app.App, 
 		if err := reg.RegisterModule(m); err != nil {
 			bus.Publish(ctx, messaging.Message{
 				Topic:   "log.server",
+				Payload: "[Registering Modules info] Error Registering Module: " + m.Manifest().Name,
+			})
+			return nil, fmt.Errorf("boot: register module %s: %w", m.Manifest().Name, err)
+		}
+	}
+	for _, m := range Modules(cfg, log) {
+		if err := m.Register(reg, k); err != nil {
+			bus.Publish(ctx, messaging.Message{
+				Topic:   "log.server",
 				Payload: "[Registering Modules] Error Registering Module: " + m.Manifest().Name,
 			})
 			return nil, fmt.Errorf("boot: register module %s: %w", m.Manifest().Name, err)
 		}
 	}
-
 	return &app.App{
 		Cfg: cfg, Log: log, DB: db, Server: srv, Redis: rdb, Bus: bus, Registry: reg, Kernel: k,
 	}, nil

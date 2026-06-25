@@ -2,6 +2,7 @@ package contract
 
 import (
 	"alloy/internal/app/config"
+	"alloy/internal/platform/messaging"
 	"context"
 	"fmt"
 	"reflect"
@@ -40,6 +41,8 @@ type Registry struct {
 	byName  map[string]Module
 
 	provided map[reflect.Type]Module // iface → providing module
+
+	impl map[reflect.Type]any // iface → concrete impl (set in Register)
 }
 
 // NewRegistry creates an empty Registry.
@@ -47,6 +50,8 @@ func NewRegistry() *Registry {
 	return &Registry{
 		byName:   map[string]Module{},
 		provided: map[reflect.Type]Module{},
+
+		impl: map[reflect.Type]any{},
 	}
 }
 
@@ -86,11 +91,45 @@ func validatePort(p PortSpec, mod, dir string) error {
 	return nil
 }
 
+// Provide registers an impl for one of this module's Provides. Called in
+// Register(). Panics on misuse — these are programmer errors caught at boot.
+// The iface param must be a reflect.Type obtained from ifaceOf[T]().
+func (r *Registry) Provide(iface reflect.Type, impl any) {
+	if iface == nil || iface.Kind() != reflect.Interface {
+		panic(fmt.Sprintf("contract: Provide: iface must be an interface type, got %v", iface))
+	}
+	if _, dup := r.impl[iface]; dup {
+		panic(fmt.Sprintf("contract: Provide: implementation for %s already registered", iface))
+	}
+	if !reflect.TypeOf(impl).Implements(iface) {
+		panic(fmt.Sprintf("contract: Provide: %T does not implement %s", impl, iface))
+	}
+	r.impl[iface] = impl
+}
+
+// RequireT is the typed convenience for use in Register().
+func RequireT[T any](r *Registry) T {
+	t := reflect.TypeOf((*T)(nil)).Elem()
+	if t.Kind() != reflect.Interface {
+		panic(fmt.Sprintf("contract: RequireT: %s is not an interface", t))
+	}
+	impl, ok := r.impl[t]
+	if !ok {
+		panic(fmt.Sprintf("contract: RequireT: no implementation for %s", t))
+	}
+	out, ok := impl.(T)
+	if !ok {
+		panic(fmt.Sprintf("contract: RequireT: impl %T not assignable to %s", impl, t))
+	}
+	return out
+}
+
 type Runtime interface {
 	Logger() func(string)
 	Config() config.Config
 	DB() DBHandle       // the global ac_orm pool, for a module's OWN tables only
 	HTTPRoot() HTTPRoot // mount the module's routes here
+	Bus() messaging.Bus
 	Context() context.Context
 }
 
@@ -121,7 +160,7 @@ type DBHandle interface {
 type HTTPRoot interface {
 	// Mount registers a chi.Router under /v1/<module>. Implementations also
 	// record the mount for /healthz introspection.
-	Mount(module string, build func(router Router))
+	Mount(module string, build func(router Router), log func(string))
 	Router() Router
 }
 

@@ -1,9 +1,10 @@
-package hello_world
+package counter
 
 import (
 	"alloy/internal/app/config"
-	helloworldhttp "alloy/internal/modules/hello_world/http"
-	"alloy/internal/modules/hello_world/service"
+	counterhttp "alloy/internal/modules/counter/http"
+	"alloy/internal/modules/counter/service"
+	"alloy/internal/modules/hello_world"
 	"alloy/models/apidocs"
 	"alloy/models/contract"
 	"reflect"
@@ -20,20 +21,22 @@ func New(cfg config.Config, log func(string)) *Module { return &Module{cfg: cfg,
 
 func (m *Module) Manifest() contract.Manifest {
 	return contract.Manifest{
-		Name:    "HelloWorld",
+		Name:    "Counter",
 		Version: "0.0.1",
 		Summary: "Helllo world Module",
 		Provides: []contract.PortSpec{
-			{Name: "HelloWorldLogger", Iface: ifaceOf[HelloWorldLogger]()},
+			{Name: "CountManager", Iface: ifaceOf[CountManager]()},
 		},
-		Requires: nil,
+		Requires: []contract.PortSpec{
+			{Name: "HelloWorldLogger", Iface: ifaceOf[hello_world.HelloWorldLogger]()},
+		},
 		Permissions: []contract.Permission{
-			{Key: "helloworld.log", Description: "Log Hello world and get back a random number"},
+			{Key: "count.manage", Description: "Manage Conuter"},
 		},
 
 		Events: []contract.EventSpec{
-			{Name: EvenHelloWorldLogStarted, Direction: contract.EventPublished, Payload: ifaceOf[HelloWoldData]()},
-			{Name: EvenHelloWorldLogDone, Direction: contract.EventPublished, Payload: ifaceOf[HelloWoldData]()},
+			{Name: EvenCounterStarted, Direction: contract.EventPublished, Payload: ifaceOf[CounterData]()},
+			{Name: EvenCounterDone, Direction: contract.EventPublished, Payload: ifaceOf[CounterData]()},
 		},
 
 		Migrations: nil,
@@ -47,11 +50,12 @@ func (m *Module) Register(reg *contract.Registry, rt contract.Runtime) error {
 		return ErrKernelDB{"expected *ember.DB from runtime"}
 	}
 
-	svc := service.New(rt)
+	hwlogger := contract.RequireT[hello_world.HelloWorldLogger](reg)
+	svc := service.New(hwlogger)
+	reg.Provide(ifaceOf[CountManager](), svc)
 
-	reg.Provide(ifaceOf[HelloWorldLogger](), svc)
-	h := helloworldhttp.New(rt, rt.Context(), svc)
-	rt.HTTPRoot().Mount("helloworld", func(r contract.Router) {
+	h := counterhttp.New(rt, rt.Context(), *svc)
+	rt.HTTPRoot().Mount("counter", func(r contract.Router) {
 		h.Mount(r)
 	}, func(s string) {
 		rt.Logger()(s)
@@ -61,7 +65,7 @@ func (m *Module) Register(reg *contract.Registry, rt contract.Runtime) error {
 }
 
 func (m *Module) RouteDocs() []apidocs.RouteDoc {
-	return helloworldhttp.RouteDocs()
+	return counterhttp.RouteDocs()
 }
 
 func (m *Module) Log() func(string) { return m.log }

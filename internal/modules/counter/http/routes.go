@@ -9,8 +9,8 @@ func RouteDocs() []apidocs.RouteDoc {
 	return []apidocs.RouteDoc{
 		{
 			Method:      "GET",
-			Path:        "/v1/helloworld/say",
-			Summary:     "SayHelloWorld",
+			Path:        "/v1/counter/add",
+			Summary:     "Add Count and return",
 			Auth:        "none",
 			RequestBody: &server.CheckRequestHasNothing{},
 			Response:    &server.CheckResponse{},

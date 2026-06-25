@@ -53,7 +53,7 @@ func New(deps Deps) (*Kernel, error) {
 	}
 	k := &Kernel{
 		cfg: deps.Config, db: deps.DB, rdb: deps.Redis,
-		bus: deps.Bus, srv: deps.Server,
+		bus: deps.Bus, srv: deps.Server, ctx: deps.Ctx,
 	}
 	// Wire kernel-owned interfaces over their kernel tables.
 	auditWriter := &dbAuditWriter{db: deps.DB}
