@@ -168,6 +168,18 @@ func (s *Server) Run(ctx context.Context) error {
 	errCh := make(chan error, 1)
 	go func() {
 		s.log("http server starting : " + "addr" + s.srv.Addr + ", env: " + s.cfg.App.Env)
+
+		// 👇 Insert here to log all routes right before the engine blocks on listening
+		logRoutes(s.router, s.log)
+
+		if err := s.srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errCh <- err
+		}
+		close(errCh)
+	}()
+
+	go func() {
+		s.log("http server starting : " + "addr" + s.srv.Addr + ", env: " + s.cfg.App.Env)
 		if err := s.srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- err
 		}
@@ -191,6 +203,18 @@ func (s *Server) Run(ctx context.Context) error {
 	}
 	s.log("http server stopped")
 	return nil
+}
+func logRoutes(router chi.Router, log func(string)) {
+	// Notice the changed type for the middlewares variadic argument
+	walkFunc := func(method string, route string, handler http.Handler, middlewares ...func(http.Handler) http.Handler) error {
+		// Formats into clean lines like: "ROUTE: [GET] /ready"
+		log(fmt.Sprintf("ROUTE: [%s] %s", method, route))
+		return nil
+	}
+
+	if err := chi.Walk(router, walkFunc); err != nil {
+		log("failed to walk chi router: " + err.Error())
+	}
 }
 
 func addrFor(cfg config.Config) string {

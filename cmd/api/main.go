@@ -10,7 +10,7 @@ import (
 
 	"alloy/internal/app/boot"
 	"alloy/internal/app/config"
-	"alloy/internal/modules/auth"
+	"alloy/internal/modules/hello_world"
 	"alloy/internal/platform/messaging"
 	server "alloy/internal/server"
 	"alloy/internal/tui"
@@ -84,7 +84,7 @@ func run_app() error {
 func printAPIDocs() {
 	var docs []apidocs.RouteDoc
 
-	cm := auth.Module{}
+	cm := hello_world.Module{}
 	docs = append(docs, server.RouteDocs()...)
 	docs = append(docs, cm.RouteDocs()...)
 

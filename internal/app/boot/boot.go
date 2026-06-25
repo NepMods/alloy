@@ -2,7 +2,7 @@ package boot
 
 import (
 	"alloy/internal/app/config"
-	"alloy/internal/modules/auth"
+	"alloy/internal/modules/hello_world"
 	platformdb "alloy/internal/platform/db"
 	"alloy/internal/platform/kernel"
 	"alloy/internal/platform/messaging"
@@ -19,7 +19,7 @@ import (
 
 func Modules(cfg config.Config, log func(string)) []contract.Module {
 	return []contract.Module{
-		auth.New(cfg, log),
+		hello_world.New(cfg, log),
 	}
 }
 
@@ -67,7 +67,6 @@ func Build(ctx context.Context, cfg config.Config, log func(string)) (*app.App, 
 		Config: cfg, Logger: log, Redis: rdb,
 		DBPing: func(c context.Context) error { return db.Ping(c) },
 	})
-
 	k, err := kernel.New(kernel.Deps{
 		Config: cfg, DB: db, Redis: rdb, Bus: bus, Server: srv, Ctx: ctx,
 	})

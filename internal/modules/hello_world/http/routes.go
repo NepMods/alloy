@@ -8,9 +8,9 @@ import (
 func RouteDocs() []apidocs.RouteDoc {
 	return []apidocs.RouteDoc{
 		{
-			Method:      "POST",
-			Path:        "/auth/register",
-			Summary:     "Register a new user",
+			Method:      "GET",
+			Path:        "/helloworld",
+			Summary:     "SayHelloWorld",
 			Auth:        "none",
 			RequestBody: &server.CheckRequestHasNothing{},
 			Response:    &server.CheckResponse{},

@@ -38,6 +38,8 @@ type PortSpec struct {
 type Registry struct {
 	modules []Module
 	byName  map[string]Module
+
+	provided map[reflect.Type]Module // iface → providing module
 }
 
 // NewRegistry creates an empty Registry.
@@ -58,10 +60,28 @@ func (r *Registry) RegisterModule(m Module) error {
 	if _, dup := r.byName[mf.Name]; dup {
 		return fmt.Errorf("contract: duplicate module name %q", mf.Name)
 	}
-
+	for _, p := range mf.Provides {
+		if err := validatePort(p, mf.Name, "Provides"); err != nil {
+			return err
+		}
+		if owner, taken := r.provided[p.Iface]; taken {
+			return fmt.Errorf("contract: interface %s provided by both %q and %q",
+				p.Iface, owner.Manifest().Name, mf.Name)
+		}
+		r.provided[p.Iface] = m
+	}
 	r.modules = append(r.modules, m)
 	r.byName[mf.Name] = m
 	m.Log()(fmt.Sprintf("module %s registered successfully", mf.Name))
+	return nil
+}
+func validatePort(p PortSpec, mod, dir string) error {
+	if p.Iface == nil {
+		return fmt.Errorf("contract: module %q %s %q has nil interface", mod, dir, p.Name)
+	}
+	if p.Iface.Kind() != reflect.Interface {
+		return fmt.Errorf("contract: module %q %s %q is not an interface (got %s)", mod, dir, p.Name, p.Iface.Kind())
+	}
 	return nil
 }
 
@@ -70,6 +90,7 @@ type Runtime interface {
 	Config() config.Config
 	DB() DBHandle       // the global ac_orm pool, for a module's OWN tables only
 	HTTPRoot() HTTPRoot // mount the module's routes here
+	Context() context.Context
 }
 
 // ConfigSnapshot is a read-only view of the loaded configuration.

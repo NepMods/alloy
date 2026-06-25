@@ -85,6 +85,7 @@ func (k *Kernel) Bus() messaging.Bus          { return k.bus }
 func (k *Kernel) Audit() contract.Audit       { return k.audit }
 func (k *Kernel) Sessions() contract.Sessions { return k.sessions }
 func (k *Kernel) HTTPRoot() contract.HTTPRoot { return k.srv.HTTPRoot() }
+func (k *Kernel) Context() context.Context    { return k.ctx }
 
 // dbHandle / redisHandle are tiny adapters satisfying contract.DBHandle/RedisHandle.
 type dbHandle struct{ db *ember.DB }
