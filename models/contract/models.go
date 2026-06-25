@@ -16,10 +16,14 @@ type Module interface {
 
 // Manifest is a module's contract with the rest of the system.
 type Manifest struct {
-	Name     string     // unique id, also route prefix (/v1/<name>) + migration namespace
-	Version  string     // semver of THIS MODULE'S contract (its Provides/Requires)
-	Summary  string     // one-line description
-	Provides []PortSpec // interfaces this module exports
+	Name        string       // unique id, also route prefix (/v1/<name>) + migration namespace
+	Version     string       // semver of THIS MODULE'S contract (its Provides/Requires)
+	Summary     string       // one-line description
+	Provides    []PortSpec   // interfaces this module exports
+	Requires    []PortSpec   // interfaces this module consumes
+	Permissions []Permission // RBAC keys this module declares
+	Events      []EventSpec  // events it publishes / subscribes to
+	Migrations  []MigrationSpec
 }
 
 // PortSpec describes a port interface (a contract boundary).
@@ -113,4 +117,124 @@ type Router interface {
 	Route(pattern string, fn func(r Router)) Router
 	Group(fn func(r Router)) Router
 	Use(mw ...any)
+}
+
+// Permission is an RBAC capability declared by a module.
+type Permission struct {
+	Key          string // "<module>.<resource>.<action>"
+	Description  string
+	DefaultRoles []string // roles that get this by default on a new tenant
+}
+
+// EventSpec documents a pub/sub relationship.
+type EventSpec struct {
+	Name      string         // dotted event name, e.g. "sales.invoice.issued"
+	Direction EventDirection // published | subscribed
+	Payload   reflect.Type   // Go payload type carried
+}
+
+// EventDirection is whether a module publishes or subscribes.
+type EventDirection int
+
+const (
+	EventPublished EventDirection = iota
+	EventSubscribed
+)
+
+func (d EventDirection) String() string {
+	if d == EventSubscribed {
+		return "subscribes"
+	}
+	return "publishes"
+}
+
+// MigrationSpec is a namespaced migration owned by a module. The kernel prefixes
+// Version with the module name at run time. Up/Down receive the kernel's
+// migration surface (an opaque handle the kernel interprets as its ac_orm
+// *Schema). This indirection keeps manifests free of ac_orm imports.
+type MigrationSpec struct {
+	Version     string
+	Description string
+	Up          func(ctx context.Context, schema MigrationSchema) error
+	Down        func(ctx context.Context, schema MigrationSchema) error
+}
+
+// MigrationSchema is the migration surface a module sees. The kernel supplies a
+// concrete value whose methods mirror ac_orm's Blueprint DSL. Modules call
+// schema.Create("table", func(b Blueprint){...}) etc.
+type MigrationSchema interface {
+	Create(table string, fn func(b Blueprint)) error
+	Table(table string, fn func(b Blueprint)) error
+	Drop(table string) error
+	DropIfExists(table string) error
+	HasTable(table string) (bool, error)
+	HasColumn(table, column string) (bool, error)
+	Raw(sql string) error
+}
+
+// Blueprint is the column-DSL surface during a migration. It mirrors the subset
+// of ac_orm's Blueprint that modules need; the kernel bridges each call to the
+// real ac_orm.Blueprint.
+type Blueprint interface {
+	ID() ColumnDef
+	UUID(name ...string) ColumnDef
+	String(name string, length ...int) ColumnDef
+	Text(name string) ColumnDef
+	LongText(name string) ColumnDef
+	Integer(name string) ColumnDef
+	BigInteger(name string) ColumnDef
+	UnsignedBigInteger(name string) ColumnDef
+	Decimal(name string, precision, scale int) ColumnDef
+	Float(name string) ColumnDef
+	Double(name string) ColumnDef
+	Boolean(name string) ColumnDef
+	Date(name string) ColumnDef
+	DateTime(name string) ColumnDef
+	Timestamp(name string) ColumnDef
+	TimestampTz(name string) ColumnDef
+	Time(name string) ColumnDef
+	JSON(name string) ColumnDef
+	JSONB(name string) ColumnDef
+	Binary(name string) ColumnDef
+	Enum(name string, values []string) ColumnDef
+
+	Timestamps()
+	SoftDeletes()
+	NullableMorphs(name string)
+
+	Index(columns ...string) IndexDef
+	UniqueIndex(columns ...string) IndexDef
+	Primary(columns ...string) IndexDef
+	DropIndex(name string)
+	Foreign(column string) ForeignKeyDef
+	DropColumn(names ...string)
+}
+
+// ColumnDef is the chainable column modifier surface.
+type ColumnDef interface {
+	Nullable() ColumnDef
+	Default(v any) ColumnDef
+	Unique() ColumnDef
+	Comment(s string) ColumnDef
+	AutoIncrement() ColumnDef
+	Unsigned() ColumnDef
+	After(col string) ColumnDef
+}
+
+// IndexDef is the chainable index modifier surface.
+type IndexDef interface {
+	Name(name string) IndexDef
+	Algorithm(a string) IndexDef
+}
+
+// ForeignKeyDef is the chainable FK surface.
+type ForeignKeyDef interface {
+	References(col string) ForeignKeyDef
+	On(table string) ForeignKeyDef
+	OnDelete(action string) ForeignKeyDef
+	OnUpdate(action string) ForeignKeyDef
+	CascadeOnDelete() ForeignKeyDef
+	RestrictOnDelete() ForeignKeyDef
+	NullOnDelete() ForeignKeyDef
+	Name(name string) ForeignKeyDef
 }

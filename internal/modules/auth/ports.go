@@ -1,3 +1,7 @@
+package auth
+
+import "context"
+
 // ─── Provided ports (this module's public contract) ──────────────
 //
 // Other modules Require these. Bumping any signature → bump Manifest.Version.
@@ -20,4 +24,22 @@ type MembershipResolver interface {
 	MembersOf(ctx context.Context, tenantID int64) ([]Member, error)
 	// Role returns a single user's role in a tenant, or "" if not a member.
 	Role(ctx context.Context, tenantID, userID int64) (string, error)
+}
+
+// ─── Value types (part of the contract) ──────────────────────────
+
+// UserProfile is the public, credential-free view of a user. It is the ONLY
+// shape other modules ever see for a user.
+type UserProfile struct {
+	ID    int64  `json:"id"`
+	Email string `json:"email"`
+	Name  string `json:"name"`
+}
+
+// Member is a tenant membership row as seen by other modules.
+type Member struct {
+	UserID int64  `json:"user_id"`
+	Email  string `json:"email"`
+	Name   string `json:"name"`
+	Role   string `json:"role"`
 }

@@ -9,7 +9,6 @@ import (
 	authhttp "alloy/internal/modules/auth/http"
 
 	"github.com/NepMods/ember"
-	"github.com/aws/smithy-go/auth"
 )
 
 type Module struct {
@@ -25,8 +24,15 @@ func (m *Module) Manifest() contract.Manifest {
 		Version: "0.1.0",
 		Summary: "Authentication and authorization module.",
 		Provides: []contract.PortSpec{
-			{Name: "IdentityResolver", Iface: ifaceOf[auth.IdentityResolver]()},
-			{Name: "MembershipResolver", Iface: ifaceOf[auth.MembershipResolver]()},
+			{Name: "IdentityResolver", Iface: ifaceOf[IdentityResolver]()},
+			{Name: "MembershipResolver", Iface: ifaceOf[MembershipResolver]()},
+		},
+		Requires: nil, // auth depends only on kernel-owned interfaces (always available)
+		Permissions: []contract.Permission{
+			{Key: "core.members.read", Description: "List tenant members", DefaultRoles: []string{"owner", "admin", "accountant", "reviewer"}},
+			{Key: "core.members.invite", Description: "Invite a new member", DefaultRoles: []string{"owner", "admin"}},
+			{Key: "core.members.role_set", Description: "Change a member's role", DefaultRoles: []string{"owner", "admin"}},
+			{Key: "core.profile.update", Description: "Edit own profile", DefaultRoles: allRoles()},
 		},
 	}
 }
@@ -61,4 +67,9 @@ func (e ErrKernelDB) Error() string { return "core: " + e.msg }
 // ifaceOf returns the reflect.Type of an interface T (the Elem of *T).
 func ifaceOf[T any]() reflect.Type {
 	return reflect.TypeOf((*T)(nil)).Elem()
+}
+
+// allRoles returns the canonical role set for default-permission wiring.
+func allRoles() []string {
+	return []string{"owner", "admin", "accountant", "reviewer", "viewer", "assistant"}
 }
