@@ -10,6 +10,7 @@ import (
 
 	"alloy/internal/app/boot"
 	"alloy/internal/app/config"
+	"alloy/internal/modules/auth"
 	server "alloy/internal/server"
 	"alloy/internal/tui"
 	"alloy/models/apidocs"
@@ -72,10 +73,13 @@ func run_app() error {
 func printAPIDocs() {
 	var docs []apidocs.RouteDoc
 
+	cm := auth.Module{}
 	docs = append(docs, server.RouteDocs()...)
+	docs = append(docs, cm.RouteDocs()...)
 
 	if len(docs) == 0 {
 		return
 	}
+
 	apidocs.PrintAPIRoutes(docs, apidocslogs.AppendContent)
 }

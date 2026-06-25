@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"reflect"
 )
 
 // Module is implemented by every bounded context.
@@ -15,9 +16,17 @@ type Module interface {
 
 // Manifest is a module's contract with the rest of the system.
 type Manifest struct {
-	Name    string // unique id, also route prefix (/v1/<name>) + migration namespace
-	Version string // semver of THIS MODULE'S contract (its Provides/Requires)
-	Summary string // one-line description
+	Name     string     // unique id, also route prefix (/v1/<name>) + migration namespace
+	Version  string     // semver of THIS MODULE'S contract (its Provides/Requires)
+	Summary  string     // one-line description
+	Provides []PortSpec // interfaces this module exports
+}
+
+// PortSpec describes a port interface (a contract boundary).
+type PortSpec struct {
+	Name       string       // human label, e.g. "LedgerReader"
+	Iface      reflect.Type // reflect.TypeOf((*YourIface)(nil)).Elem()
+	MinVersion string       // optional: minimum provider contract version
 }
 
 // Registry holds all loaded modules, resolves Requires → Provides, and stores
