@@ -50,6 +50,7 @@ func NewRegistry() *Registry {
 // RegisterModule adds a module.
 func (r *Registry) RegisterModule(m Module) error {
 	mf := m.Manifest()
+
 	m.Log()(fmt.Sprintf("registering module: %s, version: %s", mf.Name, mf.Version))
 	if mf.Name == "" {
 		return fmt.Errorf("contract: module with empty Name")

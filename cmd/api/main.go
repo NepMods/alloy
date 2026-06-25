@@ -11,6 +11,7 @@ import (
 	"alloy/internal/app/boot"
 	"alloy/internal/app/config"
 	"alloy/internal/modules/auth"
+	"alloy/internal/platform/messaging"
 	server "alloy/internal/server"
 	"alloy/internal/tui"
 	"alloy/models/apidocs"
@@ -62,6 +63,16 @@ func run_app() error {
 		server_log.AppendContent("Shutting down...")
 		cancel()
 	}()
+
+	api_app.Bus.Subscribe("log.info", func(ctx context.Context, msg messaging.Message) error {
+		others.AppendContent("BUS (log.info): " + msg.Payload.(string))
+		return nil
+	})
+
+	api_app.Bus.Subscribe("log", func(ctx context.Context, msg messaging.Message) error {
+		logs.AppendContent("BUS (log): " + msg.Payload.(string))
+		return nil
+	})
 
 	server_log.AppendContent("accounting_core api ready")
 	server_log.AppendContent("env : " + cfg.App.Env)

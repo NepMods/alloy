@@ -11,9 +11,12 @@ import (
 
 // Config is the fully-resolved application configuration.
 type Config struct {
-	App AppConfig
-	DB  DBConfig
-	raw map[string]string
+	App   AppConfig
+	DB    DBConfig
+	Redis RedisConfig
+
+	Messaging MessagingConfig
+	raw       map[string]string
 }
 
 type AppConfig struct {
@@ -36,6 +39,23 @@ type PoolConfig struct {
 	MaxIdle         int
 	ConnMaxLifetime time.Duration
 	ConnMaxIdle     time.Duration
+}
+
+type RedisConfig struct {
+	Addr     string
+	Password string
+	DB       int
+}
+type MessagingConfig struct {
+	// Bus is "local" (in-process) or "redis" (Redis Pub/Sub) or "nats".
+	Bus string
+	// Async turns on the LocalBus worker pool.
+	Async bool
+	// QueueSize/Workers configure the async LocalBus.
+	QueueSize int
+	Workers   int
+	// ChannelPrefix namespaces Redis/NATS channels.
+	ChannelPrefix string
 }
 
 func Load() (Config, error) {
@@ -71,6 +91,19 @@ func parse(env []string) (Config, error) {
 				ConnMaxLifetime: getDuration(m, "DB_POOL_CONN_MAX_LIFETIME", 30*time.Minute),
 				ConnMaxIdle:     getDuration(m, "DB_POOL_CONN_MAX_IDLE", 15*time.Minute),
 			},
+		},
+		Redis: RedisConfig{
+			Addr:     get(m, "REDIS_ADDR", "127.0.0.1:6379"),
+			Password: get(m, "REDIS_PASSWORD", ""),
+			DB:       getInt(m, "REDIS_DB", 0),
+		},
+
+		Messaging: MessagingConfig{
+			Bus:           get(m, "MESSAGING_BUS", "local"),
+			Async:         getBool(m, "MESSAGING_ASYNC", false),
+			QueueSize:     getInt(m, "MESSAGING_QUEUE_SIZE", 1024),
+			Workers:       getInt(m, "MESSAGING_WORKERS", 4),
+			ChannelPrefix: get(m, "MESSAGING_CHANNEL_PREFIX", ""),
 		},
 	}
 	return cfg, nil
@@ -109,6 +142,14 @@ func getDuration(m map[string]string, k string, def time.Duration) time.Duration
 	if v, ok := m[k]; ok && v != "" {
 		if d, err := time.ParseDuration(v); err == nil {
 			return d
+		}
+	}
+	return def
+}
+func getBool(m map[string]string, k string, def bool) bool {
+	if v, ok := m[k]; ok && v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			return b
 		}
 	}
 	return def

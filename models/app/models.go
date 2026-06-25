@@ -2,18 +2,24 @@ package app
 
 import (
 	"alloy/internal/app/config"
+	"alloy/internal/platform/messaging"
 	"context"
 	"strconv"
 
 	server "alloy/models/server"
 
 	"github.com/NepMods/ember"
+
+	goredis "github.com/redis/go-redis/v9"
 )
 
 type App struct {
-	Cfg    config.Config
-	Log    func(string)
-	DB     *ember.DB
+	Cfg   config.Config
+	Log   func(string)
+	DB    *ember.DB
+	Redis goredis.UniversalClient
+	Bus   messaging.Bus
+
 	Server *server.Server
 }
 
