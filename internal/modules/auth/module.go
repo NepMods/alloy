@@ -7,6 +7,7 @@ import (
 	"reflect"
 
 	authhttp "alloy/internal/modules/auth/http"
+	"alloy/internal/modules/auth/migrations"
 
 	"github.com/NepMods/ember"
 )
@@ -28,12 +29,20 @@ func (m *Module) Manifest() contract.Manifest {
 			{Name: "MembershipResolver", Iface: ifaceOf[MembershipResolver]()},
 		},
 		Requires: nil, // auth depends only on kernel-owned interfaces (always available)
+
 		Permissions: []contract.Permission{
 			{Key: "core.members.read", Description: "List tenant members", DefaultRoles: []string{"owner", "admin", "accountant", "reviewer"}},
 			{Key: "core.members.invite", Description: "Invite a new member", DefaultRoles: []string{"owner", "admin"}},
 			{Key: "core.members.role_set", Description: "Change a member's role", DefaultRoles: []string{"owner", "admin"}},
 			{Key: "core.profile.update", Description: "Edit own profile", DefaultRoles: allRoles()},
 		},
+
+		Events: []contract.EventSpec{
+			{Name: EventUserRegistered, Direction: contract.EventPublished, Payload: ifaceOf[UserProfile]()},
+			{Name: EventUserLoggedIn, Direction: contract.EventPublished, Payload: ifaceOf[UserProfile]()},
+		},
+
+		Migrations: migrations.Specs(),
 	}
 }
 

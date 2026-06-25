@@ -43,3 +43,19 @@ type Member struct {
 	Name   string `json:"name"`
 	Role   string `json:"role"`
 }
+
+// AuditAction is a typed reminder that core reports audit entries via the
+// kernel's Audit interface (it does NOT write audit_log itself).
+const (
+	AuditActionRegister = "core.user.register"
+	AuditActionLogin    = "core.user.login"
+	AuditActionUpdate   = "core.user.update"
+	AuditActionInvite   = "core.member.invite"
+	AuditActionRoleSet  = "core.member.role_set"
+)
+
+// Events core publishes. Other modules may subscribe (e.g. notifications).
+const (
+	EventUserRegistered = "core.user.registered" // payload: UserProfile
+	EventUserLoggedIn   = "core.user.logged_in"  // payload: UserProfile
+)
