@@ -14,7 +14,7 @@ Built as a modular monolith — each bounded context is a self-contained module 
 
 ```bash
 # 1. Clone and enter the repo
-git clone <repo-url> alloy
+git clone https://github.com/NepMods/alloy.git
 cd alloy
 
 # 2. Copy the example env and edit for your setup
