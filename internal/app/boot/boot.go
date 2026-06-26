@@ -2,8 +2,6 @@ package boot
 
 import (
 	"alloy/internal/app/config"
-	"alloy/internal/modules/counter"
-	"alloy/internal/modules/hello_world"
 	platformdb "alloy/internal/platform/db"
 	"alloy/internal/platform/kernel"
 	"alloy/internal/platform/messaging"
@@ -17,13 +15,6 @@ import (
 
 	goredis "github.com/redis/go-redis/v9"
 )
-
-func Modules(cfg config.Config, log func(string)) []contract.Module {
-	return []contract.Module{
-		hello_world.New(cfg, log),
-		counter.New(cfg, log),
-	}
-}
 
 func Build(ctx context.Context, cfg config.Config, log func(string)) (*app.App, error) {
 	db, err := platformdb.Open(ctx, cfg)
@@ -73,7 +64,8 @@ func Build(ctx context.Context, cfg config.Config, log func(string)) (*app.App, 
 		Config: cfg, DB: db, Redis: rdb, Bus: bus, Server: srv, Ctx: ctx,
 	})
 	reg := contract.NewRegistry()
-	for _, m := range Modules(cfg, log) {
+	mods := Modules(cfg, log)
+	for _, m := range mods {
 		if err := reg.RegisterModule(m); err != nil {
 			bus.Publish(ctx, messaging.Message{
 				Topic:   "log.server",
@@ -82,13 +74,22 @@ func Build(ctx context.Context, cfg config.Config, log func(string)) (*app.App, 
 			return nil, fmt.Errorf("boot: register module %s: %w", m.Manifest().Name, err)
 		}
 	}
-	for _, m := range Modules(cfg, log) {
+	for _, m := range mods {
 		if err := m.Register(reg, k); err != nil {
 			bus.Publish(ctx, messaging.Message{
 				Topic:   "log.server",
 				Payload: "[Registering Modules] Error Registering Module: " + m.Manifest().Name,
 			})
 			return nil, fmt.Errorf("boot: register module %s: %w", m.Manifest().Name, err)
+		}
+	}
+	for _, m := range mods {
+		if err := m.RequirementRegister(reg, k); err != nil {
+			bus.Publish(ctx, messaging.Message{
+				Topic:   "log.server",
+				Payload: "[Registering Modules] Error in RequirementRegister: " + m.Manifest().Name,
+			})
+			return nil, fmt.Errorf("boot: requirement register module %s: %w", m.Manifest().Name, err)
 		}
 	}
 	return &app.App{

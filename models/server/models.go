@@ -165,6 +165,7 @@ func (s *Server) Run(ctx context.Context) error {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
+	var startupErr error
 	errCh := make(chan error, 1)
 	go func() {
 		s.log("http server starting : " + "addr" + s.srv.Addr + ", env: " + s.cfg.App.Env)
@@ -178,30 +179,29 @@ func (s *Server) Run(ctx context.Context) error {
 		close(errCh)
 	}()
 
-	go func() {
-		s.log("http server starting : " + "addr" + s.srv.Addr + ", env: " + s.cfg.App.Env)
-		if err := s.srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			errCh <- err
-		}
-		close(errCh)
-	}()
-
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
+		s.log("context cancelled, shutting down : " + ctx.Err().Error())
 	case sig := <-stop:
 		s.log("shutdown signal received : " + sig.String())
 	case err := <-errCh:
-		return err
+		s.log("server error : " + err.Error())
+		startupErr = err
 	}
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	if err := s.srv.Shutdown(shutdownCtx); err != nil {
 		s.log("graceful shutdown failed : " + err.Error())
+		if startupErr != nil {
+			return startupErr
+		}
 		return err
 	}
 	s.log("http server stopped")
+	if startupErr != nil {
+		return startupErr
+	}
 	return nil
 }
 func logRoutes(router chi.Router, log func(string)) {

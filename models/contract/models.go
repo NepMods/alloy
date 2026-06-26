@@ -6,13 +6,21 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+
+	goredis "github.com/redis/go-redis/v9"
 )
+
+type RedisHandle struct{ RDB goredis.UniversalClient }
+
+func (h *RedisHandle) Raw() any                       { return h.RDB }
+func (h *RedisHandle) Ping(ctx context.Context) error { return h.RDB.Ping(ctx).Err() }
 
 // Module is implemented by every bounded context.
 type Module interface {
 	Manifest() Manifest
 	Log() func(string)
 	Register(reg *Registry, rt Runtime) error
+	RequirementRegister(reg *Registry, rt Runtime) error
 }
 
 // Manifest is a module's contract with the rest of the system.
@@ -130,6 +138,7 @@ type Runtime interface {
 	DB() DBHandle       // the global ac_orm pool, for a module's OWN tables only
 	HTTPRoot() HTTPRoot // mount the module's routes here
 	Bus() messaging.Bus
+	Redis() RedisHandle
 	Context() context.Context
 }
 

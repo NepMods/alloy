@@ -1,4 +1,4 @@
-module alloy
+module github.com/nepmods/alloy
 
 go 1.26.3
 

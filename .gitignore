@@ -1,0 +1,27 @@
+# Binaries
+main
+modgen
+*.exe
+*.test
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment
+.env
+
+# OS
+typescript
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Go
+vendor/
+

@@ -19,6 +19,7 @@ import (
 	server "alloy/models/server"
 
 	"github.com/NepMods/ember"
+
 	goredis "github.com/redis/go-redis/v9"
 )
 
@@ -80,7 +81,7 @@ func (k *Kernel) Logger() func(string) {
 }
 func (k *Kernel) Config() config.Config       { return k.cfg }
 func (k *Kernel) DB() contract.DBHandle       { return &dbHandle{db: k.db} }
-func (k *Kernel) Redis() redisHandle          { return redisHandle{rdb: k.rdb} }
+func (k *Kernel) Redis() contract.RedisHandle { return contract.RedisHandle{RDB: k.rdb} }
 func (k *Kernel) Bus() messaging.Bus          { return k.bus }
 func (k *Kernel) Audit() contract.Audit       { return k.audit }
 func (k *Kernel) Sessions() contract.Sessions { return k.sessions }
@@ -92,11 +93,6 @@ type dbHandle struct{ db *ember.DB }
 
 func (h *dbHandle) Raw() any                       { return h.db }
 func (h *dbHandle) Ping(ctx context.Context) error { return h.db.Ping(ctx) }
-
-type redisHandle struct{ rdb goredis.UniversalClient }
-
-func (h *redisHandle) Raw() any                       { return h.rdb }
-func (h *redisHandle) Ping(ctx context.Context) error { return h.rdb.Ping(ctx).Err() }
 
 // ─── audit_log writer ────────────────────────────────────────────
 

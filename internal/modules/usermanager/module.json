@@ -1,0 +1,16 @@
+{
+  "name": "UserManager",
+  "version": "0.0.1",
+  "summary": "User management module",
+  "go_pkg": "alloy/internal/modules/usermanager",
+  "provides": [{"port": "UserManager", "iface": "alloy/models/usermanager.UserManager"}],
+  "requires": [],
+  "permissions": [],
+  "events": {
+    "publishes": [],
+    "subscribes": [{"topic": "auth.user.logged_in", "payload": "alloy/models/auth.LoginEvent"}]
+  },
+  "http": {
+    "mount": ""
+  }
+}
