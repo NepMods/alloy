@@ -4,13 +4,9 @@ package boot
 import (
 	"alloy/internal/app/config"
 	"alloy/models/contract"
-	auth "alloy/internal/modules/auth"
-	usermanager "alloy/internal/modules/usermanager"
 )
 
 func Modules(cfg config.Config, log func(string)) []contract.Module {
 	return []contract.Module{
-		usermanager.New(cfg, log),
-		auth.New(cfg, log),
 	}
 }

@@ -14,17 +14,31 @@ type Config struct {
 	App   AppConfig
 	DB    DBConfig
 	Redis RedisConfig
+	R2    R2Config
 
 	Messaging MessagingConfig
 	raw       map[string]string
 }
 
 type AppConfig struct {
-	Env       string // development | staging | production | test
-	Name      string
-	Port      int
-	LogLevel  string // debug | info | warn | error
-	LogFormat string // text | json
+	Env              string // development | staging | production | test
+	Name             string
+	Port             int
+	LogLevel         string // debug | info | warn | error
+	LogFormat        string // text | json
+	JWTSecret        string
+	AdminID          string
+	BaseURL          string
+	TelegramBotToken string
+	ResetKeySecret   string
+}
+
+type R2Config struct {
+	AccountID       string
+	AccessKeyID     string
+	SecretAccessKey string
+	BucketName      string
+	PublicURL       string
 }
 
 type DBConfig struct {
@@ -75,11 +89,16 @@ func parse(env []string) (Config, error) {
 
 	cfg := Config{
 		App: AppConfig{
-			Env:       get(m, "APP_ENV", "development"),
-			Name:      get(m, "APP_NAME", "AllyApp"),
-			Port:      getInt(m, "APP_PORT", 8080),
-			LogLevel:  get(m, "LOG_LEVEL", "info"),
-			LogFormat: get(m, "LOG_FORMAT", "text"),
+			Env:              get(m, "APP_ENV", "development"),
+			Name:             get(m, "APP_NAME", "AllyApp"),
+			Port:             getInt(m, "APP_PORT", 8080),
+			LogLevel:         get(m, "LOG_LEVEL", "info"),
+			LogFormat:        get(m, "LOG_FORMAT", "text"),
+			JWTSecret:        get(m, "JWT_SECRET", "change-me"),
+			AdminID:          get(m, "ADMIN_ID", ""),
+			BaseURL:          get(m, "BASE_URL", "http://localhost:8080"),
+			TelegramBotToken: get(m, "TELEGRAM_BOT_TOKEN", ""),
+			ResetKeySecret:   get(m, "RESET_KEY_SECRET", ""),
 		},
 		DB: DBConfig{
 			Driver:   get(m, "DB_DRIVER", "sqlite"),
@@ -98,6 +117,13 @@ func parse(env []string) (Config, error) {
 			DB:       getInt(m, "REDIS_DB", 0),
 		},
 
+		R2: R2Config{
+			AccountID:       get(m, "R2_ACCOUNT_ID", ""),
+			AccessKeyID:     get(m, "R2_ACCESS_KEY_ID", ""),
+			SecretAccessKey: get(m, "R2_SECRET_ACCESS_KEY", ""),
+			BucketName:      get(m, "R2_BUCKET_NAME", ""),
+			PublicURL:       get(m, "R2_PUBLIC_URL", ""),
+		},
 		Messaging: MessagingConfig{
 			Bus:           get(m, "MESSAGING_BUS", "local"),
 			Async:         getBool(m, "MESSAGING_ASYNC", false),
